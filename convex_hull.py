@@ -88,10 +88,153 @@ def sort_clockwise(points: List[Point]):
 
 
 def base_case_hull(points: List[Point]) -> List[Point]:
-    """ Base case of the recursive algorithm.
     """
-    # TODO: You need to implement this function.
-    return points
+    Base case of the recursive algorithm.
+    """
+
+    if len(points) <= 3:
+        return points
+
+    # Sort the points by ascending x value, breaking ties by ascending y value.
+    points.sort()
+
+    # Initialize the convex hull.
+    hull = []
+
+    # Initialize our control variables.
+    p = 0
+    q = None
+
+    # Iterate through the points to find the convex hull.
+    while True:
+        hull.append(points[p])
+        q = (p + 1) % len(points)
+
+        for i in range(len(points)):
+            if is_counter_clockwise(points[p], points[i], points[q]):
+                q = i
+
+        p = q
+
+        if p == 0:
+            break
+    
+    return hull
+
+
+def find_upper_tangent(L: List[Point], R: List[Point], right_of_left_idx: int, left_of_right_idx: int) -> Tuple[int, int]:
+    """Find the upper tangent of two convex hulls."""
+    upper_tangent = (right_of_left_idx, left_of_right_idx)
+    
+    while True:
+        right_progress = False
+        left_progress = False
+        
+        # Move right point counter-clockwise
+        while True:
+            next_right = (upper_tangent[1] + 1) % len(R)
+            if is_counter_clockwise(L[upper_tangent[0]], R[upper_tangent[1]], R[next_right]):
+                upper_tangent = (upper_tangent[0], next_right)
+                right_progress = True
+            else:
+                break
+        
+        # Move left point clockwise
+        while True:
+            next_left = (upper_tangent[0] - 1) % len(L)
+            if is_clockwise(R[upper_tangent[1]], L[upper_tangent[0]], L[next_left]):
+                upper_tangent = (next_left, upper_tangent[1])
+                left_progress = True
+            else:
+                break
+        
+        # If no progress is made, we've found the upper tangent
+        if not right_progress and not left_progress:
+            break
+
+    return upper_tangent
+
+def find_lower_tangent(L: List[Point], R: List[Point], right_of_left_idx: int, left_of_right_idx: int) -> Tuple[int, int]:
+    """Find the lower tangent of two convex hulls."""
+    lower_tangent = (right_of_left_idx, left_of_right_idx)
+
+    while True:
+        right_progress = False
+        left_progress = False
+
+        # Move right point clockwise
+        while True:
+            next_right = (lower_tangent[1] - 1) % len(R)
+            if is_clockwise(L[lower_tangent[0]], R[lower_tangent[1]], R[next_right]):
+                lower_tangent = (lower_tangent[0], next_right)
+                right_progress = True
+            else:
+                break
+
+        # Move left point counter-clockwise
+        while True:
+            next_left = (lower_tangent[0] + 1) % len(L)
+            if is_counter_clockwise(R[lower_tangent[1]], L[lower_tangent[0]], L[next_left]):
+                lower_tangent = (next_left, lower_tangent[1])
+                left_progress = True
+            else:
+                break
+
+        # If no progress is made, we've found the lower tangent
+        if not right_progress and not left_progress:
+            break
+
+    return lower_tangent
+
+def merge_hull_segments(L: List[Point], R: List[Point], lower_tangent: Tuple[int, int], upper_tangent: Tuple[int, int]) -> List[Point]:
+    """Merge the points from two convex hulls based on the tangents."""
+    result = []
+
+    # Merge Left
+    for i in range(lower_tangent[0], upper_tangent[0] + 1):
+        result.append(L[i])
+
+    # Merge Right
+    if lower_tangent[1] > upper_tangent[1]:
+        for i in range(upper_tangent[1], lower_tangent[1] + 1):
+            result.append(R[i])
+    else:
+        for i in range(upper_tangent[1], len(R)):
+            result.append(R[i])
+        for i in range(0, lower_tangent[1] + 1):
+            result.append(R[i])
+
+    return result
+
+def get_max_by_x_coordinate(point):
+    """Finds the max X value in the list"""
+    return point[0]
+
+def get_min_by_x_coordinate(point):
+    """Finds the min X value in the list"""
+    return point[0]
+
+def merge_hulls(L: List[Point], R: List[Point]) -> List[Point]:
+    """
+    Given two lists of points, L and R, each of which represents a convex hull,
+    computes and returns the convex hull of the combined points in L and R.
+    """
+    # Sort the points in L and R by ascending x value, breaking ties by ascending y value.
+    sort_clockwise(L)
+    sort_clockwise(R)
+
+    # Initialize our control variables.
+    right_of_left_idx = L.index(max(L, key=get_max_by_x_coordinate))
+    left_of_right_idx = R.index(min(R, key=get_min_by_x_coordinate))
+
+    # Find upper and lower tangents
+    upper_tangent = find_upper_tangent(L, R, right_of_left_idx, left_of_right_idx)
+    lower_tangent = find_lower_tangent(L, R, right_of_left_idx, left_of_right_idx)
+
+    # Merge the points into a single convex hull
+    result = merge_hull_segments(L, R, lower_tangent, upper_tangent)
+
+    return result
 
 
 def compute_hull(points: List[Point]) -> List[Point]:
@@ -99,7 +242,19 @@ def compute_hull(points: List[Point]) -> List[Point]:
     Given a list of points, computes the convex hull around those points
     and returns only the points that are on the hull.
     """
-    # TODO: Implement a correct computation of the convex hull
-    #  using the divide-and-conquer algorithm
-    # TODO: Document your Initialization, Maintenance and Termination invariants.
-    return points
+    points.sort()
+
+    if len(points) <= 5:
+        return base_case_hull(points)
+    
+    # Split the points into two halves (L & R).
+    middle = len(points) // 2
+    L = points[:middle]
+    R = points[middle:]
+
+    # Recursively compute the hulls of the two halves.
+    L = compute_hull(L)
+    R = compute_hull(R)
+
+    # Merge the two hulls together.
+    return merge_hulls(L, R)
