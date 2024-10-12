@@ -5,6 +5,7 @@ from typing import Tuple
 
 EPSILON = sys.float_info.epsilon
 Point = Tuple[int, int]
+sys.setrecursionlimit(1500)
 
 
 def y_intercept(p1: Point, p2: Point, x: int) -> float:
