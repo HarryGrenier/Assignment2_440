@@ -72,6 +72,8 @@ def split_in_two(points: List[Point]):
     x_values = [p[0] for p in points]  # Get all x-values from the points
     middle_x = sum(x_values) / len(points)  # Find the middle x-value
 
+    # INVARIANT: A point can only be appended to one list and then cannot be moved or
+    # added to any other list
     for p in points:
         if p[0] <= middle_x:  # If the point is on the left side
             left_points.append(p)
@@ -224,6 +226,10 @@ def graham_scan(points: List[Point]) -> List[Point]:
     point_len = len(points)
 
     # Find the point with the lowest y-value (or lowest x if y is the same)
+    
+    # INVARIANT: The minimum index variable will always be set to the point with the lowest y
+    # value that it has looked at. So there will be no points already scanned that havea lower
+    # y value than the minimum index variable (the y value can be equal tho)
     min_idx = 0
     for i in range(1, point_len):
         if points[i][1] < points[min_idx][1] or (points[i][1] == points[min_idx][1] and points[i][0] < points[min_idx][0]):
@@ -237,12 +243,15 @@ def graham_scan(points: List[Point]) -> List[Point]:
     points[1:] = sorted(points[1:], key=lambda x: (180 + (180 / 3.1415926535) * math.atan2(x[1] - pivot[1], x[0] - pivot[0])) % 360)
 
     # Start building the hull with the first three points
+
+    # INVARIANT: Points 0 and 1 will never be popped off the stack in this model
     stack = [points[0], points[1], points[2]]
 
     # Process the remaining points
     for i in range(3, point_len):
         while orientation(stack[-2], stack[-1], points[i]) != 2:  # Keep removing points if they are not counterclockwise
             stack.pop()
+            # INVARIANT: Once a point is removed, it will never be checked again
         stack.append(points[i])  # Add the current point to the hull
 
     return stack  # Return the points that form the convex hull
